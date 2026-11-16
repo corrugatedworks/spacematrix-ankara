@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keçiören Spacematrix</title>
+<style>
+  :root { --zemin:#14171c; --kart:#1b1f26; --yazi:#e8eaed; --soluk:#9aa3ad; --cizgi:#2c333c; --izgara:#262c34; --vurgu:#6fb1ff;
+          --vadi:#ff6b5e; --disi:#7fb4e6; --pilot:#f2c14e; --ada:#8a939e; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:var(--zemin); color:var(--yazi); font:14px/1.5 system-ui, "Segoe UI", sans-serif; }
+  header, main, footer { max-width:1240px; margin:0 auto; padding:0 16px; }
+  header { padding-top:22px; }
+  h1 { font-size:22px; margin:0 0 4px; font-weight:650; }
+  h2 { font-size:16px; margin:0 0 4px; font-weight:600; }
+  p { margin:4px 0; }
+  .soluk { color:var(--soluk); }
+  nav a, a { color:var(--vurgu); }
+  .ozet { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:10px; margin:16px 0; }
+  .ozet div { background:var(--kart); border:1px solid var(--cizgi); border-radius:8px; padding:10px 12px; }
+  .ozet b { display:block; font-size:20px; font-variant-numeric:tabular-nums; }
+  .ozet small { color:var(--soluk); font-size:11.5px; }
+  #yilcubugu { position:sticky; top:0; z-index:5; background:rgba(20,23,28,.95); border-bottom:1px solid var(--cizgi); backdrop-filter:blur(4px); }
+  #yilcubugu .ic { max-width:1240px; margin:0 auto; padding:8px 16px; display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+  #yil { font-size:24px; font-weight:650; font-variant-numeric:tabular-nums; min-width:82px; }
+  #kaynak { color:var(--soluk); font-size:12px; min-width:92px; }
+  #kay { flex:1; min-width:160px; accent-color:var(--vurgu); }
+  select, button { background:#20262e; color:var(--yazi); border:1px solid var(--cizgi); border-radius:5px; padding:4px 8px; font:inherit; font-size:13px; }
+  button { cursor:pointer; } button:hover { border-color:var(--vurgu); }
+  .izgara { display:grid; grid-template-columns:minmax(0, 3fr) minmax(0, 2fr); gap:16px; margin:16px 0; }
+  .kart { background:var(--kart); border:1px solid var(--cizgi); border-radius:10px; padding:14px; min-width:0; }
+  .kart .bas { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap; margin-bottom:6px; }
+  .tam { grid-column:1 / -1; }
+  svg { display:block; width:100%; height:auto; overflow:visible; }
+  svg#hr { overflow:hidden; border-radius:6px; }
+  svg text { fill:var(--soluk); font-size:11px; }
+  .eksen path, .eksen line { stroke:var(--cizgi); }
+  .eksen text { fill:var(--soluk); }
+  .lejant { display:flex; flex-wrap:wrap; gap:4px 14px; font-size:12px; color:var(--soluk); margin-top:6px; }
+  .lejant i { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:-2px; }
+  #ipucu { position:fixed; pointer-events:none; display:none; background:rgba(20,23,28,.96); border:1px solid var(--cizgi); border-radius:6px; padding:6px 9px; font-size:12px; max-width:280px; z-index:10; }
+  .kucuk { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; }
+  .galeri { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px; }
+  .galeri figure { margin:0; background:var(--kart); border:1px solid var(--cizgi); border-radius:8px; overflow:hidden; }
+  .galeri img { width:100%; display:block; background:#fff; }
+  .galeri figcaption { padding:8px 10px; font-size:12.5px; color:var(--soluk); }
+  footer { padding:20px 16px 40px; color:var(--soluk); font-size:12.5px; }
+  @media (max-width: 900px) { .izgara { grid-template-columns:1fr; } .kucuk { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+</head>
+<body>
+<header>
+  <nav class="soluk" style="font-size:13px"><a href="../index.html">Ana sayfa</a> · <a href="index.html">3B zamansal model</a> · Spacematrix grafikleri</nav>
+  <h1>Keçiören pilotu: Spacematrix 2002 → 2026</h1>
+  <p class="soluk">Basınevleri / Karargahtepe, 700 × 900 m (52,8 ha). Berghauser Pont & Haupt'un Spacematrix göstergeleri: GSI (taban alanı / ada), FSI (kat alanı / ada), L = FSI / GSI (ortalama kat), OSR = (1 − GSI) / FSI. Yıl kesitleri Google Earth ve Esri Wayback görüntülerinden; kat sayıları alt–üst aralık olarak, burada orta değer.</p>
+  <div class="ozet" id="ozet"></div>
+</header>
+
+<div id="yilcubugu"><div class="ic">
+  <button id="oynat" aria-label="Oynat">▶</button>
+  <div id="yil">2002</div>
+  <div id="kaynak"></div>
+  <input id="kay" type="range" min="0" max="22" step="1" value="0" aria-label="Yıl kesiti">
+  <label class="soluk" style="font-size:12px">FSI <select id="fsi"><option value="orta" selected>orta</option><option value="alt">alt</option><option value="ust">üst</option></select></label>
+</div></div>
+
+<main>
+  <div class="izgara">
+    <section class="kart">
+      <div class="bas"><div><h2>Spacemate: adalar</h2><p class="soluk" style="font-size:12.5px">Her nokta bir ada (boyut = ada alanı). İz: 2002'den seçili yıla. Kalın çizgiler pilot, vadi ve vadi dışı toplamları. Tıkla: adayı seç.</p></div>
+        <label class="soluk" style="font-size:12px"><input type="checkbox" id="izler" checked> izler</label></div>
+      <svg id="sm"></svg>
+      <div class="lejant"><span><i style="background:var(--vadi)"></i>vadi alt adaları V1–V6</span><span><i style="background:var(--ada)"></i>diğer adalar</span><span><i style="background:var(--pilot)"></i>pilot</span><span><i style="background:var(--disi)"></i>vadi dışı</span><span class="soluk">kesikli: L (kat) ışınları · noktalı: OSR eğrileri</span></div>
+    </section>
+    <section class="kart">
+      <div class="bas"><div><h2>Ada haritası</h2><p class="soluk" style="font-size:12.5px">Seçili yılda ada göstergesi. Mavi: talveg (dere yatağı).</p></div>
+        <select id="harita"><option value="FSI">FSI</option><option value="GSI">GSI</option><option value="L">L (kat)</option><option value="OSR">OSR</option><option value="dFSI">ΔFSI (2002'den)</option><option value="dGSI">ΔGSI (2002'den)</option></select></div>
+      <svg id="hr"></svg>
+      <div id="hrlej"></div>
+      <p id="secili" class="soluk" style="font-size:12.5px;margin-top:8px"></p>
+    </section>
+
+    <section class="kart tam">
+      <div class="bas"><div><h2>Zaman serileri</h2><p class="soluk" style="font-size:12.5px">Alan ağırlıklı toplamlar; bant: FSI alt–üst kat varsayımı. Seçili ada ince beyaz çizgiyle.</p></div></div>
+      <div class="kucuk" id="seriler"></div>
+    </section>
+
+    <section class="kart">
+      <div class="bas"><div><h2>Spacemate: dere yatağına göre bantlar</h2><p class="soluk" style="font-size:12.5px">Arazi, talvege uzaklığa ya da yataktan yüksekliğe (HAND) göre bantlara ayrılmış; her bandın 2002 → seçili yıl yörüngesi.</p></div>
+        <select id="olcut"><option value="uzaklik">talvege yatay uzaklık</option><option value="yukseklik">yataktan yükseklik (HAND)</option></select></div>
+      <svg id="bs"></svg>
+      <div class="lejant" id="bslej"></div>
+    </section>
+    <section class="kart">
+      <div class="bas"><div><h2>Yoğunlaşma yatakta toplanıyor</h2><p class="soluk" style="font-size:12.5px">Talvegden uzaklaştıkça birikimli arazi payı (x) ve 2002 → 2026 net kat alanı artışının payı (y). Köşegen: eşit dağılım. Eğri ne kadar yukarıdaysa artış yatağa o kadar yakın.</p></div>
+        <select id="egri"></select></div>
+      <svg id="lz"></svg>
+      <p class="soluk" style="font-size:12.5px" id="lzyazi"></p>
+    </section>
+  </div>
+
+  <h2 style="margin-top:28px">Statik şekiller</h2>
+  <p class="soluk" style="font-size:12.5px;margin-bottom:10px">`betikler/pilot_gorsel.py` çıktıları (makale taslağı için). Büyütmek için tıkla.</p>
+  <div class="galeri" id="galeri"></div>
+</main>
+<footer>
+  Kaynaklar: bina izleri Overture Maps (OSM ODbL, Microsoft CDLA-Permissive) + elle izler; katlar TKGM tapu, OSM, Overture ve sınıf varsayımları; yıl kesitleri Google Earth (2002–2026) ve Esri World Imagery Wayback; arazi 1/1000 hâlihazır nokta kotları + Copernicus GLO-30; 1973 görüntüsü USGS Hexagon (KH-9). Akademik, ticari olmayan çalışma; ara sonuçlar.
+</footer>
+<div id="ipucu"></div>
+
+<script>
+(async () => {
+const tr = (v, d = 2) => v == null || isNaN(v) ? "–" : v.toFixed(d).replace(".", ",");
+const $ = id => document.getElementById(id);
+const ip = $("ipucu");
+const ipGoster = (e, h) => { ip.innerHTML = h; ip.style.display = "block"; ip.style.left = Math.min(e.clientX + 14, innerWidth - 290) + "px"; ip.style.top = (e.clientY + 14) + "px"; };
+const ipGizle = () => ip.style.display = "none";
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const R = { vadi: css("--vadi"), disi: css("--disi"), pilot: css("--pilot"), ada: css("--ada") };
+
+const sayi = r => { for (const k in r) if (r[k] !== "" && !isNaN(+r[k]) && !["ad", "kaynak", "bant", "olcut", "grup", "tanim"].includes(k)) r[k] = +r[k]; return r; };
+const [adaY, grupY, bantY, yatak, adaGeo, talveg] = await Promise.all([
+  d3.csv("../veri/pilot_ada_yil.csv", sayi), d3.csv("../veri/pilot_grup_yil.csv", sayi), d3.csv("../veri/pilot_bant_yil.csv", sayi),
+  d3.csv("../veri/pilot_yatak_ozet.csv", sayi), d3.json("../veri/pilot_ada.geojson"), d3.json("../veri/pilot_talveg.geojson")]);
+
+const zamanlar = [...new Set(grupY.map(r => r.zaman))].sort((a, b) => a - b);
+const kaynakZ = new Map(grupY.map(r => [r.zaman, r.kaynak]));
+$("kay").max = zamanlar.length - 1;
+let zi = 0, fsiK = "orta", secili = null;
+const F = r => r["FSI_" + fsiK];
+const Lv = r => fsiK === "orta" ? r.L_orta : F(r) / r.GSI;
+const Ov = r => fsiK === "orta" ? r.OSR_orta : (1 - r.GSI) / F(r);
+
+const adalar = d3.group(adaY, r => r.ada_no);
+for (const s of adalar.values()) s.sort((a, b) => a.zaman - b.zaman);
+const gruplar = d3.group(grupY, r => r.grup);
+for (const s of gruplar.values()) s.sort((a, b) => a.zaman - b.zaman);
+const adaAd = n => { const r = adalar.get(n)[0]; return r.vadi ? `vadi ${r.ad}` : `ada ${r.ad}`; };
+const adaRenk = n => adalar.get(n)[0].vadi ? R.vadi : R.ada;
+
+// özet kutuları
+{ const p = gruplar.get("pilot"), v = gruplar.get("vadi"), a = p[0], b = p.at(-1), va = v[0], vb = v.at(-1);
+  const ys = yatak.find(r => r.tanim.startsWith("hâlihazır DTM, ≥ 3 ha") && r.esik === 50);
+  $("ozet").innerHTML = [
+    [`${tr(a.FSI_orta)} → ${tr(b.FSI_orta)}`, "pilot FSI (kat alanı / ada)"],
+    [`${tr(a.GSI)} → ${tr(b.GSI)}`, "pilot GSI (taban alanı / ada)"],
+    [`${tr(a.L_orta, 1)} → ${tr(b.L_orta, 1)}`, "pilot L (ortalama kat)"],
+    [`${tr(va.FSI_orta)} → ${tr(vb.FSI_orta)}`, "vadi V1–V6 FSI"],
+    [`%${Math.round(ys.dF_pay * 100)}`, `kat alanı artışının talvegin 50 m çevresinde (arazinin %${Math.round(ys.arazi_pay * 100)}'ü)`],
+  ].map(([b, s]) => `<div><b>${b}</b><small>${s}</small></div>`).join(""); }
+
+// ---------- Spacemate ortak çizimi ----------
+const SW = 640, SH = 470, sm = { t: 14, r: 40, b: 40, l: 46 };
+function spacemate(svg, xmax, ymax) {
+  svg.attr("viewBox", `0 0 ${SW} ${SH}`);
+  const x = d3.scaleLinear([0, xmax], [sm.l, SW - sm.r]), y = d3.scaleLinear([0, ymax], [SH - sm.b, sm.t]);
+  const g = svg.append("g");
+  const kirp = "k" + Math.random().toString(36).slice(2);
+  svg.append("clipPath").attr("id", kirp).append("rect").attr("x", sm.l).attr("y", sm.t).attr("width", SW - sm.l - sm.r).attr("height", SH - sm.t - sm.b);
+  const ref = g.append("g").attr("clip-path", `url(#${kirp})`);
+  for (const L of [1, 2, 3, 4, 6, 8, 12, 20]) {
+    ref.append("line").attr("x1", x(0)).attr("y1", y(0)).attr("x2", x(xmax)).attr("y2", y(L * xmax)).attr("stroke", "#3a434e").attr("stroke-dasharray", "4 4");
+    const xe = Math.min(xmax, ymax / L) * 0.97;
+    g.append("text").attr("x", x(xe) + (L * xmax > ymax ? 0 : 4)).attr("y", y(L * xe) + (L * xmax > ymax ? -4 : 0)).attr("text-anchor", L * xmax > ymax ? "middle" : "start").text(`L${L}`).attr("font-size", 10);
+  }
+  for (const O of [0.25, 0.5, 1, 2, 4]) {
+    const pts = d3.range(0.005, xmax + 0.001, xmax / 200).map(s => [x(s), y((1 - s) / O)]);
+    ref.append("path").attr("d", d3.line()(pts)).attr("fill", "none").attr("stroke", "#4a5562").attr("stroke-dasharray", "1 3");
+    const s0 = Math.min(xmax * 0.96, 1 - O * ymax * 0.92 > 0 ? xmax * 0.96 : xmax * 0.96);
+    const yy = (1 - s0) / O; if (yy > 0 && yy < ymax) g.append("text").attr("x", x(s0)).attr("y", y(yy) - 3).attr("text-anchor", "end").attr("font-size", 10).text(`OSR ${String(O).replace(".", ",")}`);
+  }
+  g.append("g").attr("class", "eksen").attr("transform", `translate(0,${SH - sm.b})`).call(d3.axisBottom(x).ticks(6).tickFormat(d3.format(".1f")));
+  g.append("g").attr("class", "eksen").attr("transform", `translate(${sm.l},0)`).call(d3.axisLeft(y).ticks(6));
+  g.append("text").attr("x", SW - sm.r).attr("y", SH - 6).attr("text-anchor", "end").text("GSI →");
+  g.append("text").attr("x", 6).attr("y", sm.t + 2).text("FSI");
+  return { x, y, kat: svg.append("g").attr("clip-path", `url(#${kirp})`) };
+}
+
+// ---------- 1. Adalar Spacemate ----------
+const fsiMax = d3.max(adaY, r => r.FSI_ust);
+const S1 = spacemate(d3.select("#sm"), 0.7, Math.min(Math.ceil(fsiMax), 5));
+const rAda = d3.scaleSqrt([0, d3.max(adaY, r => r.ada_m2)], [0, 11]);
+const izK = S1.kat.append("g"), grupK = S1.kat.append("g"), adaK = S1.kat.append("g"), seciliK = S1.kat.append("g");
+const hat = (x, y, f) => d3.line().x(r => x(r.GSI)).y(r => y(f(r)));
+function cizS1() {
+  const t = zamanlar[zi], iz = $("izler").checked;
+  const sim = [...adalar.entries()].map(([n, s]) => ({ n, s: s.filter(r => r.zaman <= t + 1e-6), r: s.find(r => Math.abs(r.zaman - t) < 1e-6) })).filter(d => d.r);
+  izK.selectAll("path").data(iz ? sim : [], d => d.n).join("path").attr("fill", "none").attr("stroke", d => adaRenk(d.n)).attr("stroke-opacity", d => adalar.get(d.n)[0].vadi ? .55 : .22).attr("stroke-width", 1)
+    .attr("d", d => hat(S1.x, S1.y, F)(d.s));
+  adaK.selectAll("g").data(sim, d => d.n).join(en => { const g = en.append("g").style("cursor", "pointer"); g.append("line"); g.append("circle"); return g; })
+    .each(function (d) {
+      const g = d3.select(this), cx = S1.x(d.r.GSI);
+      g.select("line").attr("x1", cx).attr("x2", cx).attr("y1", S1.y(d.r.FSI_alt)).attr("y2", S1.y(d.r.FSI_ust)).attr("stroke", adaRenk(d.n)).attr("stroke-opacity", .35);
+      g.select("circle").attr("cx", cx).attr("cy", S1.y(F(d.r))).attr("r", Math.max(rAda(d.r.ada_m2 * d.r.pilot_pay), 2.5))
+        .attr("fill", adaRenk(d.n)).attr("fill-opacity", .78).attr("stroke", d.n === secili ? "#fff" : "#14171c").attr("stroke-width", d.n === secili ? 2 : .8);
+    })
+    .on("mousemove", (e, d) => ipGoster(e, `<b>${adaAd(d.n)}</b> · ${tr(d.r.ada_m2 / 1e4)} ha<br>GSI ${tr(d.r.GSI)} · FSI ${tr(d.r.FSI_orta)} (${tr(d.r.FSI_alt)}–${tr(d.r.FSI_ust)})<br>L ${tr(d.r.L_orta, 1)} · OSR ${tr(d.r.OSR_orta)}`))
+    .on("mouseleave", ipGizle).on("click", (e, d) => sec(d.n === secili ? null : d.n));
+  const gs = ["pilot", "vadi", "vadi_disi"].map(g => ({ g, s: gruplar.get(g).filter(r => r.zaman <= t + 1e-6) }));
+  const gR = { pilot: R.pilot, vadi: R.vadi, vadi_disi: R.disi };
+  grupK.selectAll("path").data(gs, d => d.g).join("path").attr("fill", "none").attr("stroke", d => gR[d.g]).attr("stroke-width", 3).attr("stroke-linejoin", "round").attr("d", d => hat(S1.x, S1.y, F)(d.s));
+  grupK.selectAll("rect").data(gs, d => d.g).join("rect").attr("width", 11).attr("height", 11).attr("rx", 2).attr("fill", d => gR[d.g]).attr("stroke", "#14171c")
+    .attr("x", d => S1.x(d.s.at(-1).GSI) - 5.5).attr("y", d => S1.y(F(d.s.at(-1))) - 5.5);
+  seciliK.selectAll("path").data(secili ? [secili] : []).join("path").attr("fill", "none").attr("stroke", "#fff").attr("stroke-width", 1.8)
+    .attr("d", n => hat(S1.x, S1.y, F)(adalar.get(n).filter(r => r.zaman <= t + 1e-6)));
+}
+
+// ---------- 2. Ada haritası ----------
+const HW = 460, HH = 560;
+const hrSvg = d3.select("#hr").attr("viewBox", `0 0 ${HW} ${HH}`);
+const adaF = adaGeo.features.filter(f => adalar.has(f.properties.ada_no));
+for (const f of adaF) if (d3.geoArea(f) > 2 * Math.PI) {   // d3 saat yönünde halka bekler (GeoJSON tersi)
+  const g = f.geometry; if (g.type === "Polygon") g.coordinates.forEach(r => r.reverse()); else g.coordinates.forEach(p => p.forEach(r => r.reverse())); }
+const proj = d3.geoMercator().fitExtent([[6, 6], [HW - 6, HH - 6]], { type: "FeatureCollection", features: adaF });
+const yol = d3.geoPath(proj);
+hrSvg.append("rect").attr("width", HW).attr("height", HH).attr("fill", "#101318").attr("rx", 6);
+const hrAda = hrSvg.append("g");
+hrSvg.append("g").selectAll("path").data(talveg.features).join("path").attr("d", yol).attr("fill", "none").attr("stroke", "#3aa0ff")
+  .attr("stroke-width", f => f.properties.sinif === "ana" ? 2.6 : 1.1).attr("stroke-opacity", .9).style("pointer-events", "none");
+hrSvg.select("rect").lower();
+const HR = {
+  FSI: { s: d3.scaleSequential([0, 4], d3.interpolateMagma), f: F, ad: "FSI" },
+  GSI: { s: d3.scaleSequential([0, 0.6], d3.interpolateViridis), f: r => r.GSI, ad: "GSI" },
+  L: { s: d3.scaleSequential([1, 16], d3.interpolatePlasma), f: Lv, ad: "L (kat)" },
+  OSR: { s: d3.scaleSequential([2, 0.1], d3.interpolateCividis), f: Ov, ad: "OSR" },
+  dFSI: { s: d3.scaleDiverging([-1.5, 0, 3], d3.interpolateRdBu).interpolator(t => d3.interpolateRdBu(1 - t)), f: (r, r0) => F(r) - F(r0), ad: "ΔFSI" },
+  dGSI: { s: d3.scaleDiverging([-0.25, 0, 0.25], t => d3.interpolateRdBu(1 - t)), f: (r, r0) => r.GSI - r0.GSI, ad: "ΔGSI" },
+};
+function cizHarita() {
+  const t = zamanlar[zi], m = HR[$("harita").value];
+  hrAda.selectAll("path").data(adaF, f => f.properties.ada_no).join("path").attr("d", yol).style("cursor", "pointer")
+    .attr("fill", f => { const s = adalar.get(f.properties.ada_no), r = s.find(r => Math.abs(r.zaman - t) < 1e-6); return r ? m.s(m.f(r, s[0])) : "#333"; })
+    .attr("stroke", f => f.properties.ada_no === secili ? "#fff" : (f.properties.vadi ? R.vadi : "#14171c")).attr("stroke-width", f => f.properties.ada_no === secili ? 2.5 : (f.properties.vadi ? 1.6 : .7))
+    .on("mousemove", (e, f) => { const n = f.properties.ada_no, s = adalar.get(n), r = s.find(r => Math.abs(r.zaman - t) < 1e-6);
+      ipGoster(e, `<b>${adaAd(n)}</b> · pilotta %${Math.round(f.properties.pilot_pay * 100)}<br>${m.ad}: ${tr(m.f(r, s[0]))}<br>2002 → ${Math.floor(t)}: FSI ${tr(F(s[0]))} → ${tr(F(r))}, GSI ${tr(s[0].GSI)} → ${tr(r.GSI)}`); })
+    .on("mouseleave", ipGizle).on("click", (e, f) => sec(f.properties.ada_no === secili ? null : f.properties.ada_no));
+  hrAda.selectAll("path").filter(f => f.properties.ada_no === secili).raise();
+  // lejant
+  const W = 300, l = d3.select("#hrlej").html("").append("svg").attr("viewBox", `0 0 ${W + 20} 34`).style("max-width", "340px");
+  const dom = m.s.domain(), x = d3.scaleLinear([d3.min(dom), d3.max(dom)], [10, W + 10]);
+  const id = "gr" + $("harita").value, gr = l.append("defs").append("linearGradient").attr("id", id);
+  d3.range(0, 1.001, .1).forEach(k => gr.append("stop").attr("offset", k).attr("stop-color", m.s(x.invert(10 + k * W))));
+  l.append("rect").attr("x", 10).attr("y", 2).attr("width", W).attr("height", 10).attr("rx", 2).attr("fill", `url(#${id})`);
+  l.append("g").attr("class", "eksen").attr("transform", "translate(0,12)").call(d3.axisBottom(x).ticks(6).tickSize(3));
+}
+
+// ---------- 3. Zaman serileri ----------
+const OW = 290, OH = 190, om = { t: 18, r: 10, b: 24, l: 34 };
+const gosterge = [["GSI", r => r.GSI, null], ["FSI", F, true], ["L (kat)", Lv, null], ["OSR", Ov, null]];
+const seriG = gosterge.map(([ad, f, band]) => {
+  const svg = d3.select("#seriler").append("div").append("svg").attr("viewBox", `0 0 ${OW} ${OH}`);
+  const tum = [...grupY, ...adaY.filter(r => r.vadi)];
+  const ymax = ad === "OSR" ? 1.4 : ad.startsWith("L") ? d3.max(grupY, Lv) * 1.15 : ad === "FSI" ? d3.max(grupY, r => r.FSI_ust) * 1.08 : 0.45;
+  const x = d3.scaleLinear([2002, 2026.5], [om.l, OW - om.r]), y = d3.scaleLinear([0, ymax], [OH - om.b, om.t]).nice();
+  svg.append("g").attr("class", "eksen").attr("transform", `translate(0,${OH - om.b})`).call(d3.axisBottom(x).ticks(5).tickFormat(d3.format("d")));
+  svg.append("g").attr("class", "eksen").attr("transform", `translate(${om.l},0)`).call(d3.axisLeft(y).ticks(4));
+  svg.append("text").attr("x", om.l).attr("y", 11).attr("fill", "#e8eaed").attr("font-size", 12).attr("font-weight", 600).text(ad);
+  const k = svg.append("g").attr("clip-path", null);
+  return { svg, x, y, f, band, k, ad };
+});
+function cizSeri() {
+  const t = zamanlar[zi], gR = { pilot: R.pilot, vadi: R.vadi, vadi_disi: R.disi };
+  for (const S of seriG) {
+    const gs = ["vadi_disi", "vadi", "pilot"].map(g => ({ g, s: gruplar.get(g) }));
+    S.k.selectAll("path.band").data(S.band ? gs : [], d => d.g).join("path").attr("class", "band").attr("fill", d => gR[d.g]).attr("fill-opacity", .12)
+      .attr("d", d => d3.area().x(r => S.x(r.zaman)).y0(r => S.y(r.FSI_alt)).y1(r => S.y(r.FSI_ust))(d.s));
+    S.k.selectAll("path.hat").data(gs, d => d.g).join("path").attr("class", "hat").attr("fill", "none").attr("stroke", d => gR[d.g]).attr("stroke-width", 2)
+      .attr("d", d => d3.line().x(r => S.x(r.zaman)).y(r => S.y(S.f(r)))(d.s));
+    S.k.selectAll("path.sec").data(secili ? [adalar.get(secili)] : []).join("path").attr("class", "sec").attr("fill", "none").attr("stroke", "#fff").attr("stroke-width", 1.2).attr("stroke-dasharray", "3 2")
+      .attr("d", s => d3.line().x(r => S.x(r.zaman)).y(r => S.y(Math.min(S.f(r), S.y.domain()[1]))).defined(r => isFinite(S.f(r)))(s));
+    S.k.selectAll("line.t").data([t]).join("line").attr("class", "t").attr("x1", S.x(t)).attr("x2", S.x(t)).attr("y1", om.t).attr("y2", OH - om.b).attr("stroke", "#fff").attr("stroke-opacity", .35);
+    S.k.selectAll("circle").data(gs, d => d.g).join("circle").attr("r", 3.5).attr("fill", d => gR[d.g])
+      .attr("cx", S.x(t)).attr("cy", d => S.y(S.f(d.s.find(r => Math.abs(r.zaman - t) < 1e-6))));
+  }
+}
+
+// ---------- 4. Bant Spacemate ----------
+const S2 = spacemate(d3.select("#bs"), 0.45, 3);
+function cizBant() {
+  const t = zamanlar[zi], o = $("olcut").value;
+  const bs = d3.groups(bantY.filter(r => r.olcut === o), r => r.bant).map(([b, s]) => ({ b, sira: s[0].sira, s: s.sort((a, c) => a.zaman - c.zaman) })).sort((a, c) => a.sira - c.sira);
+  const renk = d3.scaleSequential([0, bs.length - 1], t => d3.interpolateYlGnBu(1 - t * .8));
+  S2.kat.selectAll("path").data(bs, d => d.b).join("path").attr("fill", "none").attr("stroke", (d, i) => renk(i)).attr("stroke-width", 2.2).attr("stroke-linejoin", "round")
+    .attr("d", d => hat(S2.x, S2.y, F)(d.s.filter(r => r.zaman <= t + 1e-6)));
+  S2.kat.selectAll("circle").data(bs, d => d.b).join("circle").attr("r", d => 3 + Math.sqrt(d.s[0].arazi_ha)).attr("fill", (d, i) => renk(i)).attr("stroke", "#14171c")
+    .each(function (d) { const r = d.s.find(r => Math.abs(r.zaman - t) < 1e-6); d3.select(this).attr("cx", S2.x(r.GSI)).attr("cy", S2.y(F(r))); })
+    .on("mousemove", (e, d) => { const r = d.s.find(r => Math.abs(r.zaman - t) < 1e-6), r0 = d.s[0];
+      ipGoster(e, `<b>${d.b}</b> · ${tr(r.arazi_ha, 1)} ha<br>GSI ${tr(r0.GSI)} → ${tr(r.GSI)}<br>FSI ${tr(F(r0))} → ${tr(F(r))}<br>L ${tr(r0.L_orta, 1)} → ${tr(r.L_orta, 1)}`); }).on("mouseleave", ipGizle);
+  $("bslej").innerHTML = bs.map((d, i) => `<span><i style="background:${renk(i)}"></i>${d.b}</span>`).join("") + `<span>(nokta boyutu = bant alanı)</span>`;
+}
+
+// ---------- 5. Yoğunlaşma eğrisi ----------
+const tanimlar = [...new Set(yatak.filter(r => r.esik !== "" && r.tanim !== "elle vadi V1–V6").map(r => r.tanim))];
+$("egri").innerHTML = tanimlar.map((t, i) => `<option value="${i}">${t}</option>`).join("");
+const LW = 520, LH = 400, lm = { t: 12, r: 16, b: 40, l: 46 };
+const lz = d3.select("#lz").attr("viewBox", `0 0 ${LW} ${LH}`);
+const lx = d3.scaleLinear([0, 1], [lm.l, LW - lm.r]), ly = d3.scaleLinear([0, 1], [LH - lm.b, lm.t]);
+lz.append("g").attr("class", "eksen").attr("transform", `translate(0,${LH - lm.b})`).call(d3.axisBottom(lx).ticks(5).tickFormat(d3.format(".0%")));
+lz.append("g").attr("class", "eksen").attr("transform", `translate(${lm.l},0)`).call(d3.axisLeft(ly).ticks(5).tickFormat(d3.format(".0%")));
+lz.append("line").attr("x1", lx(0)).attr("y1", ly(0)).attr("x2", lx(1)).attr("y2", ly(1)).attr("stroke", "#4a5562").attr("stroke-dasharray", "4 4");
+lz.append("text").attr("x", LW - lm.r).attr("y", LH - 6).attr("text-anchor", "end").text("birikimli arazi payı (yataktan dışa) →");
+lz.append("text").attr("x", 6).attr("y", lm.t + 2).text("kat alanı artışı payı");
+const lzK = lz.append("g");
+{ const v = yatak.find(r => r.tanim === "elle vadi V1–V6");
+  lz.append("circle").attr("cx", lx(v.arazi_pay)).attr("cy", ly(v.dF_pay)).attr("r", 5).attr("fill", R.vadi);
+  lz.append("text").attr("x", lx(v.arazi_pay) + 8).attr("y", ly(v.dF_pay) + 14).attr("fill", R.vadi).text("elle vadi V1–V6"); }
+function cizEgri() {
+  const tn = tanimlar[+$("egri").value], s = [{ arazi_pay: 0, dF_pay: 0, dF_pay_alt: 0, dF_pay_ust: 0, esik: 0 }, ...yatak.filter(r => r.tanim === tn).sort((a, b) => a.arazi_pay - b.arazi_pay)];
+  lzK.selectAll("path.b").data([s]).join("path").attr("class", "b").attr("fill", R.pilot).attr("fill-opacity", .15)
+    .attr("d", d3.area().x(r => lx(r.arazi_pay)).y0(r => ly(r.dF_pay_alt)).y1(r => ly(r.dF_pay_ust)));
+  lzK.selectAll("path.h").data([s]).join("path").attr("class", "h").attr("fill", "none").attr("stroke", R.pilot).attr("stroke-width", 2.5).attr("d", d3.line().x(r => lx(r.arazi_pay)).y(r => ly(r.dF_pay)));
+  lzK.selectAll("g").data(s.slice(1), r => r.esik).join(en => { const g = en.append("g"); g.append("circle"); g.append("text"); return g; })
+    .each(function (r) { const g = d3.select(this);
+      g.select("circle").attr("cx", lx(r.arazi_pay)).attr("cy", ly(r.dF_pay)).attr("r", 4).attr("fill", R.pilot).attr("stroke", "#14171c");
+      g.select("text").attr("x", lx(r.arazi_pay) + 6).attr("y", ly(r.dF_pay) + 14).attr("font-size", 10).text(`${r.esik} m`); })
+    .on("mousemove", (e, r) => ipGoster(e, `<b>${tn.includes("HAND") ? "yataktan ≤ " : "talvege ≤ "}${r.esik} m</b><br>arazinin %${Math.round(r.arazi_pay * 100)}'i · artışın %${Math.round(r.dF_pay * 100)}'i (%${Math.round(r.dF_pay_alt * 100)}–${Math.round(r.dF_pay_ust * 100)})<br>FSI ${tr(r.FSI02)} → ${tr(r.FSI26)} · yoğunlaşma oranı ${tr(r.yogunlasma_orani)}`)).on("mouseleave", ipGizle);
+  const r50 = s.find(r => r.esik === (tn.includes("HAND") ? 5 : 50));
+  $("lzyazi").textContent = r50 ? `${tn.includes("HAND") ? "Yataktan en çok 5 m yüksekteki" : "Talvegin 50 m çevresindeki"} arazi (%${Math.round(r50.arazi_pay * 100)}) 2002 → 2026 kat alanı artışının %${Math.round(r50.dF_pay * 100)}'ini taşıyor.` : "";
+}
+
+// ---------- seçim, yıl, olaylar ----------
+function sec(n) { secili = n; const s = n && adalar.get(n);
+  $("secili").innerHTML = n ? `<b style="color:#fff">${adaAd(n)}</b>: GSI ${tr(s[0].GSI)} → ${tr(s.at(-1).GSI)} · FSI ${tr(F(s[0]))} → ${tr(F(s.at(-1)))} · L ${tr(Lv(s[0]), 1)} → ${tr(Lv(s.at(-1)), 1)} (2002 → 2026). <a href="#" id="kaldir">seçimi kaldır</a>` : "Bir adaya tıkla: seçilen ada tüm grafiklerde vurgulanır.";
+  if (n) $("kaldir").onclick = e => { e.preventDefault(); sec(null); };
+  ciz(); }
+function ciz() {
+  const t = zamanlar[zi], k = kaynakZ.get(t);
+  $("yil").textContent = t.toFixed(1).replace(".", ","); $("kaynak").textContent = k.startsWith("ge:") ? `Google Earth ${k.slice(3)}` : `Esri Wayback ${k.slice(3)}`;
+  cizS1(); cizHarita(); cizSeri(); cizBant();
+}
+$("kay").addEventListener("input", e => { zi = +e.target.value; ciz(); });
+$("fsi").addEventListener("change", e => { fsiK = e.target.value; ciz(); sec(secili); });
+for (const id of ["izler", "harita", "olcut"]) $(id).addEventListener("change", ciz);
+$("egri").addEventListener("change", cizEgri);
+let oyun = null;
+$("oynat").addEventListener("click", () => {
+  if (oyun) { clearInterval(oyun); oyun = null; $("oynat").textContent = "▶"; return; }
+  if (zi >= zamanlar.length - 1) zi = 0;
+  $("oynat").textContent = "❚❚";
+  oyun = setInterval(() => { zi++; $("kay").value = zi; ciz(); if (zi >= zamanlar.length - 1) $("oynat").click(); }, 450);
+});
+sec(null); cizEgri();
+zi = zamanlar.length - 1; $("kay").value = zi; ciz();
+
+// galeri
+const sekil = [["sm_1_spacemate_adalar.png", "Spacemate: adalar 2002 → 2026, vadi alt adalarının yıl yörüngesi"], ["sm_2_spacemate_bantlar.png", "Spacemate: talvege uzaklık ve HAND bantları"],
+  ["sm_3_ada_haritalari.png", "GSI / FSI / L / OSR ada haritaları, 2002 ve 2026"], ["sm_4_degisim_haritasi.png", "ΔGSI, ΔFSI, ΔL haritası"], ["sm_5_dolu_bos.png", "Dolu–boş: 2002 / 2014 / 2026"],
+  ["sm_6_kat_haritasi.png", "Bina başına kat, 2002 / 2026"], ["sm_7_gostergeler.png", "Ada başına gösterge eğimleri"], ["yatak_yogunlasma.png", "Yatağa uzaklığa göre yoğunlaşma"], ["hexagon_1973_talveg.png", "Hexagon 1973 + talveg (hizalama ±30–50 m)"]];
+$("galeri").innerHTML = sekil.map(([f, a]) => `<figure><a href="gorseller/${f}" target="_blank"><img src="gorseller/${f}" alt="${a}" loading="lazy" onerror="this.closest('figure').remove()"></a><figcaption>${a}</figcaption></figure>`).join("");
+})();
+</script>
+</body>
+</html>

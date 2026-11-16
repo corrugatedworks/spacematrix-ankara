@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keçiören pilot: 3B zamansal model</title>
+<style>
+  :root { --zemin:#14171c; --panel:rgba(20,23,28,.88); --yazi:#e8eaed; --soluk:#9aa3ad; --cizgi:#2c333c; --vurgu:#6fb1ff; }
+  html, body { margin:0; height:100%; background:var(--zemin); color:var(--yazi); font:13px/1.4 system-ui, "Segoe UI", sans-serif; overflow:hidden; }
+  #sahne { position:fixed; inset:0; }
+  .panel { position:fixed; background:var(--panel); border:1px solid var(--cizgi); border-radius:8px; padding:10px 12px; }
+  #ust { top:12px; left:12px; width:290px; }
+  #ust h1 { font-size:14px; margin:0 0 6px; font-weight:600; }
+  #ust label { display:block; margin:8px 0 2px; color:var(--soluk); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+  select, button { background:#20262e; color:var(--yazi); border:1px solid var(--cizgi); border-radius:5px; padding:4px 8px; font:inherit; }
+  button { cursor:pointer; } button:hover { border-color:var(--vurgu); }
+  #olcek { display:flex; flex-wrap:wrap; gap:4px 10px; margin-top:8px; font-size:11.5px; }
+  #olcek span { display:inline-flex; align-items:center; gap:5px; }
+  #olcek i { width:11px; height:11px; border-radius:2px; display:inline-block; }
+  #alt { left:12px; right:12px; bottom:12px; display:flex; align-items:center; gap:14px; }
+  #yil { font-size:26px; font-weight:600; font-variant-numeric:tabular-nums; min-width:64px; }
+  #kay { flex:1; accent-color:var(--vurgu); }
+  #sayi { display:grid; grid-template-columns:repeat(4, auto); gap:2px 16px; font-variant-numeric:tabular-nums; }
+  #sayi b { font-size:15px; } #sayi small { color:var(--soluk); display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; }
+  #ipucu { position:fixed; pointer-events:none; display:none; background:var(--panel); border:1px solid var(--cizgi); border-radius:6px; padding:6px 9px; font-size:12px; max-width:260px; }
+  #not { color:var(--soluk); font-size:11px; margin-top:8px; }
+  #smkutu { top:12px; right:12px; }
+  #smk text { fill:var(--soluk); font-size:9.5px; }
+  @media (max-width: 760px) { #smkutu { display:none; } #ust { width:auto; right:12px; } #alt { flex-wrap:wrap; } #sayi { grid-template-columns:repeat(4, auto); font-size:11px; } }
+</style>
+<script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }</script>
+</head>
+<body>
+<div id="sahne"></div>
+<div id="ust" class="panel">
+  <h1>Keçiören pilot · 2002 → 2026</h1>
+  <div style="font-size:12px"><a href="../index.html" style="color:var(--vurgu)">Ana sayfa</a> · <a href="spacematrix.html" style="color:var(--vurgu)">Spacematrix grafikleri</a></div>
+  <label for="renk">Bina rengi</label>
+  <select id="renk">
+    <option value="donem">Dönem (2002'de var / sonradan)</option>
+    <option value="hand">Yataktan yükseklik</option>
+    <option value="uz">Talvege yatay uzaklık</option>
+    <option value="kat">Kat sayısı</option>
+  </select>
+  <label for="kat">Kat varsayımı</label>
+  <select id="kat"><option value="a">alt</option><option value="o" selected>orta</option><option value="u">üst</option></select>
+  <label for="doku">Zemin</label>
+  <select id="doku"><option value="oto">görüntü (yıla göre 2002 / 2026)</option><option value="1973">görüntü 1973 (Hexagon)</option><option value="2002">görüntü 2002</option><option value="2026">görüntü 2026</option><option value="hand">yataktan yükseklik</option></select>
+  <div id="olcek"></div>
+  <div id="not">Sürükle: döndür · sağ tuş: kaydır · tekerlek: yakınlaş. Bina yüksekliği = kat × 3 m. Mavi: talveg (kalın = ana yatak). Kırmızı çerçeve: pilot 700 × 900 m.</div>
+</div>
+<div id="alt" class="panel">
+  <button id="oynat" aria-label="Oynat">▶</button>
+  <div id="yil">2002</div>
+  <input id="kay" type="range" min="2002" max="2026.5" step="0.25" value="2002" aria-label="Yıl">
+  <div id="sayi"></div>
+</div>
+<div id="smkutu" class="panel"><div style="font-size:11px;color:var(--soluk);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Spacemate · <span style="color:#f2c14e">pilot</span> <span style="color:#ff6b5e">vadi</span> <span style="color:#7fb4e6">vadi dışı</span></div><svg id="smk" viewBox="0 0 230 170" width="230" height="170"></svg><a href="spacematrix.html" style="font-size:12px;color:var(--vurgu)">Tüm Spacematrix grafikleri →</a></div>
+<div id="ipucu"></div>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+const V = await (await fetch("veri/pilot.json")).json();
+const A = V.arazi, [PW, PH] = V.pencere, KAT = V.kat_m;
+const zmin = Math.min(...A.z);
+const kot = (x, y) => {                       // çift doğrusal arazi kotu
+  const fx = Math.min(Math.max(x / A.dx, 0), A.nx - 1.001), fy = Math.min(Math.max(y / A.dx, 0), A.ny - 1.001);
+  const i = Math.floor(fx), j = Math.floor(fy), u = fx - i, v = fy - j, k = j * A.nx + i;
+  return A.z[k] * (1 - u) * (1 - v) + A.z[k + 1] * u * (1 - v) + A.z[k + A.nx] * (1 - u) * v + A.z[k + A.nx + 1] * u * v;
+};
+
+const el = document.getElementById("sahne");
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+el.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x14171c);
+const cam = new THREE.PerspectiveCamera(40, 1, 1, 6000);
+cam.position.set(PW / 2 + 520, 620, PH / 2 + 820);
+const ctl = new OrbitControls(cam, renderer.domElement);
+ctl.target.set(PW / 2, 20, PH / 2); ctl.maxPolarAngle = Math.PI / 2 - 0.03; ctl.update();
+scene.add(new THREE.HemisphereLight(0xffffff, 0x556070, 1.15));
+const gunes = new THREE.DirectionalLight(0xffffff, 1.6); gunes.position.set(-500, 900, 700); scene.add(gunes);
+
+// arazi
+const ag = new THREE.PlaneGeometry(PW, PH, A.nx - 1, A.ny - 1);
+ag.rotateX(-Math.PI / 2); ag.translate(PW / 2, 0, PH / 2);
+const pos = ag.attributes.position, hr = new Float32Array(pos.count * 3);
+const ramp = (t, a, b) => a.map((v, i) => v + (b[i] - v) * t);
+const handRenk = h => { const t = Math.min(Math.max(h, 0) / 45, 1); return ramp(Math.sqrt(t), [0.10, 0.28, 0.55], [0.93, 0.93, 0.88]); };
+for (let k = 0; k < pos.count; k++) { pos.setY(k, A.z[k] - zmin); const c = handRenk(A.hand[k]); hr.set(c, k * 3); }
+ag.setAttribute("color", new THREE.BufferAttribute(hr, 3)); ag.computeVertexNormals();
+const yukle = new THREE.TextureLoader();
+const doku = {}, dokuYok = new Set();   // Google Earth dokuları yalnız yerelde; yoksa HAND rengine düş
+await Promise.all(["1973", "2002", "2026"].map(async y => {
+  const u = `veri/doku_${y}.jpg`;
+  const var_ = await fetch(u, { method: "HEAD", cache: "no-store" }).then(r => r.ok, () => false);
+  if (!var_) { dokuYok.add(y); return; }
+  doku[y] = yukle.load(u); doku[y].colorSpace = THREE.SRGBColorSpace;
+}));
+const amat = new THREE.MeshLambertMaterial({ map: doku["2002"] });
+const arazi = new THREE.Mesh(ag, amat); scene.add(arazi);
+
+// talveg + pilot çerçevesi
+for (const h of V.hatlar) {
+  if (h.tur !== "talveg" || h.p.length < 2) continue;
+  const p = h.p.map(([x, y]) => new THREE.Vector3(x, kot(x, y) - zmin + 1.5, y));
+  const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(p), p.length * 2, h.sinif === "ana" ? 3 : 1.4, 6);
+  scene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0x3aa0ff })));
+}
+{ const [x0, y0, x1, y1] = V.pilot, p = [];
+  for (const [a, b, c, d] of [[x0, y0, x1, y0], [x1, y0, x1, y1], [x1, y1, x0, y1], [x0, y1, x0, y0]])
+    for (let i = 0; i <= 40; i++) { const x = a + (c - a) * i / 40, y = b + (d - b) * i / 40; p.push(new THREE.Vector3(x, kot(x, y) - zmin + 1, y)); }
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(p), new THREE.LineBasicMaterial({ color: 0xff5a4d }))); }
+
+// binalar
+const katSay = (b, m) => m === "a" ? b.ka : m === "u" ? b.ku : (b.ka + b.ku) / 2;
+const grup = new THREE.Group(); scene.add(grup);
+for (const b of V.binalar) {
+  const s = new THREE.Shape(b.p.map(([x, y]) => new THREE.Vector2(x, -y)));
+  const g = new THREE.ExtrudeGeometry(s, { depth: 1, bevelEnabled: false });
+  g.rotateX(-Math.PI / 2);                                    // (x, -y, z) -> (x, z, y): y güney = +z
+  const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial());
+  m.position.y = b.taban - zmin; m.userData = b; grup.add(m);
+}
+const yilRenk = y => ramp(Math.min(Math.max((y - 2002) / 24, 0), 1), [0.99, 0.80, 0.55], [0.70, 0.10, 0.10]);
+const katRenk = k => ramp(Math.min(Math.sqrt(k / 30), 1), [0.90, 0.90, 0.86], [0.42, 0.10, 0.45]);
+const uzRenk = u => ramp(Math.min(u / 250, 1) ** 0.6, [0.08, 0.25, 0.52], [0.93, 0.93, 0.88]);
+function renk(b, mod, km) {
+  if (mod === "hand") return handRenk(b.hand);
+  if (mod === "uz") return uzRenk(b.uz);
+  if (mod === "kat") return katRenk(katSay(b, km));
+  if (b.uc === 2002) return [0.62, 0.45, 0.30];               // 2002 çatısı (sonradan yıkılacak ya da ayakta)
+  return b.yapim ? yilRenk(b.yapim) : [0.78, 0.78, 0.76];
+}
+const OLCEK = {
+  donem: [["#c7c7c2", "2002'de var, 2026'da da"], ["#9e734d", "2002 çatısı (yıkılacak)"], ["#fccc8c", "yeni: 2003–"], ["#b21a1a", "…2026"]],
+  hand: [["#1a478c", "yatakta (0 m)"], ["#8fa5bf", "~10 m"], ["#edede0", "≥ 45 m"]],
+  uz: [["#14408a", "0 m"], ["#9db0c4", "~75 m"], ["#edede0", "≥ 250 m"]],
+  kat: [["#e5e5db", "1–2 kat"], ["#b08ab0", "~8 kat"], ["#6b1a73", "≥ 30 kat"]],
+};
+const $ = id => document.getElementById(id);
+let t = 2002;
+function guncelle() {
+  const mod = $("renk").value, km = $("kat").value;
+  let n = 0, taban = 0, katA = 0, yeni = 0;
+  for (const m of grup.children) {
+    const b = m.userData;
+    const var_ = b.uc === 2026 ? (b.yapim === null || t >= b.yapim) : (b.yikim === null || t < b.yikim);
+    m.visible = var_;
+    if (!var_) continue;
+    const k = katSay(b, km);
+    m.scale.y = Math.max(k * KAT, 2);
+    m.material.color.setRGB(...renk(b, mod, km), THREE.SRGBColorSpace);
+    if (b.pilotta) { n++; taban += b.alan; katA += b.alan * k; if (b.uc === 2026 && b.yapim) yeni++; }
+  }
+  const dk = $("doku").value;
+  const dy = dk === "oto" ? (t < 2014 ? "2002" : "2026") : dk;
+  if (dk === "hand" || dokuYok.has(dy)) { amat.map = null; amat.vertexColors = true; }
+  else { amat.vertexColors = false; amat.map = doku[dy]; }
+  for (const o of $("doku").options) if (dokuYok.has(o.value)) o.disabled = true;
+  if (dokuYok.has("2002") && dokuYok.has("2026")) { const o = $("doku").options[0]; o.disabled = true; if ($("doku").value === "oto") $("doku").value = "hand"; }
+  smCiz();
+  amat.needsUpdate = true;
+  $("yil").textContent = Math.floor(t);
+  const G = V.grup.filter(r => r.grup === "pilot").reduce((a, r) => Math.abs(r.t - t) < Math.abs(a.t - t) ? r : a);
+  const Vd = V.grup.filter(r => r.grup === "vadi").reduce((a, r) => Math.abs(r.t - t) < Math.abs(a.t - t) ? r : a);
+  const f = (v, d = 2) => v.toFixed(d).replace(".", ",");
+  $("sayi").innerHTML = `<div><small>pilot GSI</small><b>${f(G.GSI)}</b></div><div><small>pilot FSI</small><b>${f(G.FSI)}</b></div><div><small>pilot L</small><b>${f(G.L, 1)}</b></div><div><small>pilot OSR</small><b>${f(G.OSR)}</b></div>`
+    + `<div><small>vadi GSI</small><b>${f(Vd.GSI)}</b></div><div><small>vadi FSI</small><b>${f(Vd.FSI)}</b></div><div><small>vadi L</small><b>${f(Vd.L, 1)}</b></div><div><small>ayakta / yeni</small><b>${n} / ${yeni}</b></div>`;
+  $("olcek").innerHTML = OLCEK[mod].map(([c, a]) => `<span><i style="background:${c}"></i>${a}</span>`).join("");
+}
+// küçük Spacemate (GSI × FSI): pilot, vadi, vadi dışı yörüngesi, yıla bağlı
+function smCiz() {
+  const W = 230, H = 170, l = 30, b = 22, xm = 0.45, ym = 2.6;
+  const X = v => l + v / xm * (W - l - 6), Y = v => H - b - v / ym * (H - b - 8);
+  const R = { pilot: "#f2c14e", vadi: "#ff6b5e", vadi_disi: "#7fb4e6" };
+  let s = "";
+  for (const L of [1, 2, 4, 8]) { const x2 = Math.min(xm, ym / L); s += `<line x1="${X(0)}" y1="${Y(0)}" x2="${X(x2)}" y2="${Y(L * x2)}" stroke="#3a434e" stroke-dasharray="3 3"/><text x="${X(x2) - 2}" y="${Y(L * x2) + (L * xm > ym ? 10 : -3)}" text-anchor="end">L${L}</text>`; }
+  s += `<line x1="${l}" y1="${H - b}" x2="${W - 6}" y2="${H - b}" stroke="#2c333c"/><line x1="${l}" y1="8" x2="${l}" y2="${H - b}" stroke="#2c333c"/>`;
+  for (const v of [0.1, 0.2, 0.3, 0.4]) s += `<text x="${X(v)}" y="${H - b + 12}" text-anchor="middle">${String(v).replace(".", ",")}</text>`;
+  for (const v of [0, 1, 2]) s += `<text x="${l - 4}" y="${Y(v) + 3}" text-anchor="end">${v}</text>`;
+  s += `<text x="${W - 6}" y="${H - 1}" text-anchor="end">GSI</text><text x="2" y="10">FSI</text>`;
+  for (const g of ["vadi_disi", "vadi", "pilot"]) {
+    const r = V.grup.filter(r => r.grup === g && r.t <= t + 0.01).sort((a, c) => a.t - c.t); if (!r.length) continue;
+    s += `<polyline fill="none" stroke="${R[g]}" stroke-width="2" points="${r.map(r => X(r.GSI) + "," + Y(r.FSI)).join(" ")}"/>`;
+    const e = r.at(-1); s += `<circle cx="${X(e.GSI)}" cy="${Y(e.FSI)}" r="4" fill="${R[g]}" stroke="#14171c"/>`;
+  }
+  $("smk").innerHTML = s;
+}
+$("kay").addEventListener("input", e => { t = +e.target.value; guncelle(); });
+for (const id of ["renk", "kat", "doku"]) $(id).addEventListener("change", guncelle);
+let oyun = null;
+$("oynat").addEventListener("click", () => {
+  if (oyun) { clearInterval(oyun); oyun = null; $("oynat").textContent = "▶"; return; }
+  if (t >= 2026.5) t = 2002;
+  $("oynat").textContent = "❚❚";
+  oyun = setInterval(() => { t = Math.min(t + 0.25, 2026.5); $("kay").value = t; guncelle(); if (t >= 2026.5) $("oynat").click(); }, 180);
+});
+
+// ipucu
+const ray = new THREE.Raycaster(), fare = new THREE.Vector2(), ip = $("ipucu");
+renderer.domElement.addEventListener("pointermove", e => {
+  fare.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(fare, cam);
+  const h = ray.intersectObjects(grup.children.filter(m => m.visible))[0];
+  if (!h) { ip.style.display = "none"; return; }
+  const b = h.object.userData;
+  ip.innerHTML = `<b>${b.id}</b> · ${b.sinif}<br>${b.alan} m² taban · ${b.ka === b.ku ? b.ka : b.ka + "–" + b.ku} kat<br>`
+    + (b.uc === 2002 ? (b.yikim ? `2002 çatısı; yıkım ~${Math.round(b.yikim)}` : "2002 çatısı; ayakta") : (b.yapim ? `yapım ~${Math.round(b.yapim)}` : "2002'de de var"))
+    + `<br>talvege ${b.uz} m · yataktan ${String(b.hand).replace(".", ",")} m yukarıda`;
+  ip.style.display = "block"; ip.style.left = Math.min(e.clientX + 14, innerWidth - 270) + "px"; ip.style.top = (e.clientY + 14) + "px";
+});
+function boyut() { renderer.setSize(innerWidth, innerHeight); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); }
+addEventListener("resize", boyut); boyut(); guncelle();
+window.__model = { set(y) { t = y; $("kay").value = y; guncelle(); }, cam, ctl };
+renderer.setAnimationLoop(() => { ctl.update(); renderer.render(scene, cam); });
+</script>
+</body>
+</html>
